@@ -5,8 +5,8 @@ import math
 import utils
 import scipy.spatial.transform as scipy_tf
 
-DENSITY = 10
-CHUNKS = 10
+DENSITY = 20
+CHUNKS = 5
 
 
 ANGLES_PATH = "angles_vlp-32c.txt"
@@ -19,7 +19,7 @@ DETECTION_MIN_DISTANCE = 1.5
 DETECTION_MAX_DISTANCE = 31
 CONE_HEIGHT = 0.35
 
-LIDAR_ANGLES = np.arange(start=6, stop=-7, step=-1)
+LIDAR_ANGLES = np.arange(start=5, stop=-6, step=-1)
 LIDAR_RANGE = 30
 
 RENDER = True
@@ -50,22 +50,27 @@ if RENDER:
 
 ray_angles = utils.load_angles(ANGLES_PATH)
 
+# ray_angles = [1]
+# LIDAR_ANGLES = [0]
+
 def evaluate(lidar_angle):
   global TF, ray_angles, RENDER, CHUNKS
-  tf = np.matmul(scipy_tf.Rotation.from_euler('x', -lidar_angle, degrees=True).as_matrix(), TF)
+  tf = np.matmul(scipy_tf.Rotation.from_euler('x', lidar_angle, degrees=True).as_matrix(), TF)
 
   n = 0
   for ray_angle in ray_angles:
     for i in range(CHUNKS):
       pts = surface_generators.rand_cone_surface(DENSITY, math.radians(90 + ray_angle), (0, 2*np.pi), LIDAR_RANGE)
+
       pts = np.matmul(tf, pts)
       pts = vertex + pts
-      pts = pts[:, utils.pts_in_box(pts, box_min, box_max)]
-
-      n += np.count_nonzero(utils.pts_in_box(pts, box_min, box_max))
+      pts_inside = utils.pts_in_box(pts, box_min, box_max)
+      n += np.count_nonzero(pts_inside)
 
       if RENDER:
+        pts = pts[:, pts_inside]
         ax.scatter(pts[0], pts[1], pts[2], marker=('.'))
+
   return n
 
 if RENDER:
